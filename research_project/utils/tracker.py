@@ -2,7 +2,7 @@ from pathlib import Path
 from datetime import datetime
 import json
 from torch.utils.tensorboard import SummaryWriter
-from utils.metrics_printer import decorate_metrics
+from research_project.utils.metrics_printer import decorate_metrics
 
 
 class ExperimentTracker:

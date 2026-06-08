@@ -13,9 +13,9 @@ from torchvision.datasets import CIFAR100
 from torch.utils.data import DataLoader
 from torchvision.transforms.v2 import Compose, ToImage, ToDtype, Normalize
 
-import models
-from engine_training import train_one_epoch, validate_one_epoch
-from utils.tracker import ExperimentTracker
+import research_project.models as models
+from research_project.engine_training import train_one_epoch, validate_one_epoch
+from research_project.utils.tracker import ExperimentTracker
 
 
 def get_args():

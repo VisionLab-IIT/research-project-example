@@ -1,6 +1,6 @@
 from tqdm import tqdm
 import torch
-from utils.metrics import accuracy_metric
+from research_project.utils.metrics import accuracy_metric
 
 
 def train_one_epoch(
