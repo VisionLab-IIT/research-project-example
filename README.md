@@ -53,7 +53,7 @@ Here is the list of the most important stages:
 | 5. Basic Config | 05_basic_config | 556feef | - Introducting basic YAML-based configuration for better reproducibility.<br>- Moving dataset download to separate script under helpers. |
 | 6. Using OmegaConf | 06_omegaconf | 146971f | Using [OmegaConf](https://omegaconf.readthedocs.io) for convenient config handling and object-style config access. |
 | 7. Dynamic Loading | 07_dynamic_loading | 84f347b | Loading model, optimizer, scheduler and loss function dynamically based on config.<br> See the [`getattr()`](https://docs.python.org/3/library/functions.html#getattr) documentation for details. |
-| 8. Package Structure | 08_package_structure | | - Organizing code into research_project Python package for clarity. <br>- Renaming helpers/ to scripts/ as it includes a runnable script. <br>- Renaming the repo from research_project_example to research-project-example in alignment with conventions. |
+| 8. Package Structure | 08_package_structure | 2197bda | - Organizing code into research_project Python package for clarity. <br>- Renaming helpers/ to scripts/ as it includes a runnable script. <br>- Renaming the repo from research_project_example to research-project-example in alignment with conventions. |
 
 ## Training
 > [!IMPORTANT]
