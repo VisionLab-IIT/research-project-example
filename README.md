@@ -11,7 +11,7 @@ git clone https://github.com/VisionLab-IIT/research_project_example.git
 ```
 ### 1. Change your shell's working directory to the project
 ```bash
-cd research_project_example
+cd research-project-example
 ```
 
 ### 2. (optional) Create a Python virtual environment
