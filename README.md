@@ -7,7 +7,7 @@ To use the example project, you should first make the necessary preparations to 
 ### 0. Clone the repository
 Open a terminal and navigate to the directory where you would like the project to be placed, then
 ```bash
-git clone https://github.com/VisionLab-IIT/research_project_example.git
+git clone https://github.com/VisionLab-IIT/research-project-example.git
 ```
 ### 1. Change your shell's working directory to the project
 ```bash
