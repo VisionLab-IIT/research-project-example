@@ -1,9 +1,12 @@
 description: "Baseline"
 seed: !!int 0
-device: "cuda"
-batch_size: !!int 32
+device: "cpu"
 num_workers: !!int 4
-num_epochs: !!int 3
+hparams:
+  batch_size: !!int 32
+  num_epochs: !!int 3
+  lr: !!float 1e-3
+  weight_decay: !!float 1e-4
 model:
   name: "ExampleModel"
   params:
@@ -13,14 +16,12 @@ model:
 optimizer:
   name: "AdamW"
   params:
-    lr: !!float 1e-3
-    weight_decay: !!float 1e-4
+    lr: ${hparams.lr}  # OmegaConf variable interpolation.
+    weight_decay: ${hparams.weight_decay}  # OmegaConf variable interpolation.
 scheduler:
   name: OneCycleLR
   params:
-    # Using variable interpolation to reference lr.
-    # See OmegaConf documentation for details.
-    max_lr: ${optimizer.params.lr}
+    max_lr: ${optimizer.params.lr}  # OmegaConf variable interpolation.
     pct_start: !!float 0.33
     div_factor: !!float 1e3
     final_div_factor: !!float 1e4

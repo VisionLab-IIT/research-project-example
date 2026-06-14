@@ -54,6 +54,7 @@ Here is the list of the most important stages:
 | 6. Using OmegaConf | 06_omegaconf | 146971f | Using [OmegaConf](https://omegaconf.readthedocs.io) for convenient config handling and object-style config access. |
 | 7. Dynamic Loading | 07_dynamic_loading | 84f347b | Loading model, optimizer, scheduler and loss function dynamically based on config.<br> See the [`getattr()`](https://docs.python.org/3/library/functions.html#getattr) documentation for details. |
 | 8. Package Structure | 08_package_structure | 2197bda | - Organizing code into `research_project` Python package for clarity. <br>- Renaming `helpers/` to `scripts/` as it includes a runnable script. <br>- Renaming the repo from `research_project_example` to `research-project-example` in alignment with conventions. |
+| 9. Pythonic Refactor | 09_pythonic_refactor | | Refactoring code to follow Python conventions and idioms:<br>- Replacing underscores with hyphens for CLI arguments<br>- Using context manager for training time measurement<br>- Using `torch.no_grad()` decorator instead of context manager for validation function<br>- Introducing type annotations more widely in the project<br>- Using single entrypoint functions for `main_training.py` and `scripts/download_dataset.py`<br>- Replacing `log_scalar` with `log_scalars` for batch logging<br>- Refactoring config.yaml for easier hyperparameter logging<br>- Returning dataclass object in validation function<br>- Cleaning complete progress bars from terminal and adding per-epoch metric logging<br>- Using f-strings and `str.join()` in `metrics_printer`<br>- Organizing config loading and merging into a separate function in `main_training.py`|
 
 ## Training
 > [!IMPORTANT]
@@ -66,17 +67,17 @@ source .venv/bin/activate
 ```
 
 ### 2. Download Dataset
-The currently used dataset is [CIFAR100](https://www.cs.toronto.edu/~kriz/cifar.html). You can download it to the project directory with the following scipt:
+The currently used dataset is [CIFAR100](https://www.cs.toronto.edu/~kriz/cifar.html). You can download it to the project directory with the following script:
 ```bash
-python3 scripts/download_dataset.py --data_path=./data
+python3 scripts/download_dataset.py --data-path=./data
 ```
-where `--data_path` will be the location of the download.
+where `--data-path` will be the location of the download.
 
 ### 3. Start Training
 
 To train the example model (which is inspired by the [ConvNeXt](https://openaccess.thecvf.com/content/CVPR2022/papers/Liu_A_ConvNet_for_the_2020s_CVPR_2022_paper.pdf) architecture), run
 ```bash
-python3 main_training.py --data_path=./data --config_path=config/train.yaml
+python3 main_training.py --data-path=./data --config-path=config/train.yaml
 ```
 > [!NOTE]
 > OmegaConf can support type safety with structured configs which is not presented in this stage.
@@ -84,5 +85,5 @@ python3 main_training.py --data_path=./data --config_path=config/train.yaml
 > [!TIP]
 > You can override YAML config parameters with CLI parameters like this (overriding lr):
 > ```bash
-> python3 main_training.py --data_path=./data --config_path=config/train.yaml optimizer.params.lr=1e-4
+> python3 main_training.py --data-path=./data --config-path=config/train.yaml optimizer.params.lr=1e-4
 > ```

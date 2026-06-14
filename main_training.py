@@ -4,7 +4,7 @@ from datetime import datetime
 import random
 
 import numpy as np
-from omegaconf import OmegaConf
+from omegaconf import OmegaConf, DictConfig
 
 import torch
 from torch import optim
@@ -18,21 +18,17 @@ from research_project.engine_training import train_one_epoch, validate_one_epoch
 from research_project.utils.tracker import ExperimentTracker
 
 
-def get_args():
+def get_args() -> tuple["argparse.Namespace", list[str]]:
     parser = argparse.ArgumentParser()
 
-    # General
-    parser.add_argument("--seed", type=int)
-    parser.add_argument("--device", type=str)
     parser.add_argument(
-        "--config_path", 
+        "--config-path", 
         type=Path,
         help="Path to the YAML configuration file",
         required=True
     )
-    # Data
     parser.add_argument(
-        "--data_path", 
+        "--data-path", 
         type=Path, 
         help="Path to the dataset",
         required=True
@@ -43,7 +39,42 @@ def get_args():
     return args, unknown_args
 
 
-def main(args, config):
+def load_config(config_path: Path, unknown_args: list[str]) -> DictConfig:
+    # Loading config from YAML
+    config = OmegaConf.load(config_path)
+    
+    # Loading config overrides from CLI
+    cli_config = OmegaConf.from_dotlist(unknown_args)
+    
+    # Filtering only keys that exist in YAML-based config
+    cli_config = {k:v for k, v in cli_config.items() if k in config.keys()}
+    cli_config = OmegaConf.create(cli_config)
+    
+    # Overriding YAML config with CLI config
+    config = OmegaConf.merge(config, cli_config)
+    
+    print("---------- Config ----------")
+    print(OmegaConf.to_yaml(config).rstrip('\n'))
+    print("----------------------------")
+
+    return config
+
+
+def main():
+    # Parse command line arguments
+    args, unknown_args = get_args()
+    config = load_config(args.config_path, unknown_args)
+    
+    project_dir = Path(__file__).resolve().parent
+    # Checkpoint directory
+    ckpt_dir = project_dir / "ckpt"
+    ckpt_dir.mkdir(exist_ok=True)
+    
+    # Log directory
+    run_start_time = datetime.strftime(datetime.now(), "%Y-%m-%d_%H-%M")
+    log_dir = project_dir / "runs" / run_start_time
+    log_dir.mkdir(parents=True)
+
     # Basic reproducibility settings
     random.seed(config.seed)  # If Python random is used
     np.random.seed(config.seed)  # If NumPy random is used
@@ -53,14 +84,13 @@ def main(args, config):
     #torch.use_deterministic_algorithms(True)
 
     # Transforms
+    rgb_mean = [0.485, 0.456, 0.406]
+    rgb_std = [0.229, 0.224, 0.225]
     train_transforms = Compose(
         [
             ToImage(),
             ToDtype(dtype=torch.float32, scale=True),
-            Normalize(
-                mean=[0.485, 0.456, 0.406], 
-                std=[0.229, 0.224, 0.225]
-            )
+            Normalize(mean=rgb_mean, std=rgb_std)
         ]
     )
     
@@ -68,10 +98,7 @@ def main(args, config):
         [
             ToImage(),
             ToDtype(dtype=torch.float32, scale=True),
-            Normalize(
-                mean=[0.485, 0.456, 0.406], 
-                std=[0.229, 0.224, 0.225]
-            )
+            Normalize(mean=rgb_mean, std=rgb_std)
         ]
     )
 
@@ -93,7 +120,7 @@ def main(args, config):
     # Dataloaders
     train_loader = DataLoader(
         dataset=train_set,
-        batch_size=config.batch_size,
+        batch_size=config.hparams.batch_size,
         shuffle=True,
         num_workers=config.num_workers,
         drop_last=True
@@ -126,7 +153,7 @@ def main(args, config):
     scheduler_params = config.scheduler.params
     # Extending sheduler parameters
     if scheduler_cls is lr_scheduler.OneCycleLR:
-        scheduler_params["total_steps"] = config.num_epochs*len(train_loader)
+        scheduler_params["total_steps"] = config.hparams.num_epochs*len(train_loader)
     # Converting scheduler_params to keyword arguments
     scheduler = scheduler_cls(
         optimizer=optimizer,
@@ -138,7 +165,7 @@ def main(args, config):
 
     # Main loop
     tracker = ExperimentTracker(
-        log_dir=args.log_dir,
+        log_dir=log_dir,
         scalar_names=[
             "train_losses",
             "val_losses",
@@ -147,83 +174,53 @@ def main(args, config):
         metric_names=["val_acc"],
         use_tensorboard=True
     )
-    tracker.log_training_start()
-    for epoch in range(config.num_epochs):
-        print(f"Epoch {epoch}")
-        train_loss = train_one_epoch(
-            model,
-            train_loader,
-            loss_fn,
-            optimizer,
-            scheduler,
-            config.device
-        )
-
-        val_loss, val_acc = validate_one_epoch(
-            model,
-            val_loader,
-            loss_fn,
-            config.device
-        )
-
-        is_new_best = tracker.update_metric("val_acc", val_acc)
-        if is_new_best:
-            torch.save(
-                model.state_dict(),
-                args.model_weights_path
+    with tracker.timer("Total training time"):
+        for epoch in range(config.hparams.num_epochs):
+            train_loss = train_one_epoch(
+                model,
+                train_loader,
+                loss_fn,
+                optimizer,
+                scheduler,
+                config.device
             )
 
-        tracker.log_scalar(name="train_losses", value=train_loss, index=epoch)
-        tracker.log_scalar(name="val_losses", value=val_loss, index=epoch)
-        tracker.log_scalar(name="val_accs", value=val_acc, index=epoch)
-    tracker.log_training_end()
-    
-    tracker.log_hparams_and_metrics(
-        hparams=dict(
-            num_epochs=config.num_epochs,
-            lr=config.optimizer.params.lr,
-            batch_size=config.batch_size,
-            wd=config.optimizer.params.weight_decay
-        )
-    )
+            val_res = validate_one_epoch(
+                model,
+                val_loader,
+                loss_fn,
+                config.device
+            )
+
+            print(
+                f"Epoch {epoch} |",
+                f"Train loss: {train_loss:.4f} |",
+                f"Val loss: {val_res.loss:.4f} |",
+                f"Val accuracy: {val_res.accuracy:.4f}"
+            )
+
+            if tracker.update_metric("val_acc", val_res.accuracy):
+                torch.save(
+                    model.state_dict(),
+                    ckpt_dir / "model.pth"
+                )
+
+            tracker.log_scalars(
+                {
+                    "train_losses": train_loss,
+                    "val_losses": val_res.loss,
+                    "val_accs": val_res.accuracy, 
+                },
+                index=epoch
+            )
+        
+    tracker.log_hparams(OmegaConf.to_container(config.hparams, resolve=True))
     tracker.finalize_run(
         save_logs=True,
         print_metrics=True
     )
-    OmegaConf.save(config, args.log_dir/args.config_path.name)
+    OmegaConf.save(config, log_dir/args.config_path.name)
 
 
 if __name__ == "__main__":
-    # Parse command line arguments
-    args, unknown_args = get_args()
-
-    args.data_path = Path(args.data_path)
-    args.data_path.mkdir(exist_ok=True)
-    
-    project_dir = Path(__file__).parent
-    # Checkpoint directory
-    ckpt_dir = project_dir / "ckpt"
-    ckpt_dir.mkdir(exist_ok=True)
-    args.ckpt_dir = ckpt_dir
-    args.model_weights_path = args.ckpt_dir / "model.pth"
-    
-    # Log directory
-    run_start_time = datetime.strftime(datetime.now(), "%Y%m%d%H%M")
-    log_dir = project_dir / "log" / run_start_time
-    log_dir.mkdir(parents=True)
-    args.log_dir = log_dir
-
-    # Loading config from YAML
-    config = OmegaConf.load(args.config_path)
-    # Loading config overrides from CLI
-    cli_config = OmegaConf.from_dotlist(unknown_args)
-    # Filtering only keys that exist in YAML-based config
-    cli_config = {k:v for k, v in cli_config.items() if k in config.keys()}
-    cli_config = OmegaConf.create(cli_config)
-    # Overriding YAML config with CLI config
-    config = OmegaConf.merge(config, cli_config)
-    print("---------- Config ----------")
-    print(OmegaConf.to_yaml(config).rstrip('\n'))
-    print("----------------------------")
-
-    main(args, config)
+    main()

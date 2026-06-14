@@ -2,6 +2,5 @@ torch
 torchvision
 tensorboard
 tqdm
-matplotlib
 PyYAML
 omegaconf

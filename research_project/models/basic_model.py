@@ -1,3 +1,4 @@
+import torch
 from torch import nn
 from torchvision.ops import Permute
 
@@ -5,9 +6,9 @@ from torchvision.ops import Permute
 class BasicLayer(nn.Module):
     def __init__(
             self, 
-            channels, 
-            inv_bottleneck_factor=4,
-            kernel_size=5
+            channels: int, 
+            inv_bottleneck_factor: int=4,
+            kernel_size: int | tuple[int, int]=5
     ):
         super().__init__()
 
@@ -26,24 +27,20 @@ class BasicLayer(nn.Module):
             Permute([0, 3, 1, 2])
         )
     
-    def forward(self, x):
+    def forward(self, x: torch.Tensor):
         skip = x
-        x = skip + self.main_branch(x)
-
-        return x
+        return skip + self.main_branch(x)
 
 
 class ExampleModel(nn.Module):
     def __init__(
             self, 
-            feature_size, 
-            num_stages,
-            num_classes,
-            stem_scale=2
+            feature_size: int, 
+            num_stages: int,
+            num_classes: int,
+            stem_scale: int=2
     ):
         super().__init__()
-        
-        self.hidden_sizes = feature_size
         
         self.stem = nn.Sequential(
             nn.Conv2d(
@@ -76,7 +73,7 @@ class ExampleModel(nn.Module):
                 )
                 stage_feature_size *= 2
 
-            for i in range(2):
+            for _ in range(2):
                 self.stages.append(
                     BasicLayer(
                         channels=stage_feature_size,
@@ -92,7 +89,7 @@ class ExampleModel(nn.Module):
             )
         )
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         # Stem
         x = self.stem(x)
 
@@ -100,7 +97,7 @@ class ExampleModel(nn.Module):
         for stage in self.stages:
             x = stage(x)
         
-        # Globale average
+        # Global average
         x = x.mean(dim=[-2, -1])
 
         # Classification

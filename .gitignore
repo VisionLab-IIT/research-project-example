@@ -1,6 +1,7 @@
 __pycache__
 .venv
 log
+runs
 log_archive
 ckpt
 data

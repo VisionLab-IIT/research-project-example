@@ -1,50 +1,42 @@
-def decorate_metric_line(
-        name, 
-        metric,
-        max_name_length,
-        max_metric_length,
-        first_line=False
-):
-    result_str = ""
-    if not first_line:
-        result_str += "├─" + max_name_length*"─" + "─┼─" + max_metric_length*"─" + "─┤\n"
-    str_metric = str(metric)
-    result_str += "│ " + (max_name_length-len(name))*" "  + f"{name} │ {str_metric}" + (max_metric_length-len(str_metric))*" " + " │\n"
+def decorate_line(
+        name: str, 
+        metric: float,
+        max_name_length: int,
+        max_metric_length: int
+) -> str:
+    pre_name_spaces = (max_name_length - len(name))*" "
+    post_metric_spaces = (max_metric_length - len(str(metric)))*" "
 
-    return result_str
+    return f"│ {pre_name_spaces}{name} │ {metric}{post_metric_spaces} │\n"
 
 
-def decorate_metrics(metrics):
+def decorate_metrics(metrics: dict[str, float]) -> str:
     max_name_length = len("Name")
     max_metric_length = len("Value")
     for name, metric in metrics.items():
         max_name_length = max(max_name_length, len(name))
         max_metric_length = max(max_metric_length, len(str(metric)))
 
-    metric_str = ""
+    max_name_horizontal = max_name_length*"─"
+    max_metric_horizontal = max_metric_length*"─"
+    title = "Metrics"
+    title_spaces = (max_name_length + max_metric_length - len(title) + 3)*" "
 
-    # Top
-    metric_str += "╭─" + max_name_length*"─" + "───" + max_metric_length*"─" + "─╮\n"
-    # Title
-    title_str = "Metrics"
-    metric_str += "│ " + title_str + (max_name_length+max_metric_length+3-len(title_str))*" " + " │\n"
-    # Header
-    metric_str += "├─" + max_name_length*"─" + "─┬─" + max_metric_length*"─" + "─┤\n"
-    metric_str += decorate_metric_line(
-        name="Name", 
-        metric="Value",
-        max_name_length=max_name_length,
-        max_metric_length=max_metric_length,
-        first_line=True
-    )
+    lines = [
+        f"╭─{max_name_horizontal}───{max_metric_horizontal}─╮\n",
+        f"│ {title}{title_spaces} │\n",
+        f"├─{max_name_horizontal}─┬─{max_metric_horizontal}─┤\n",  #
+        decorate_line("Name", "Value", max_name_length, max_metric_length)
+    ]
+
     for name, metric in metrics.items():
-        metric_str += decorate_metric_line(
-            name=name, 
-            metric=metric,
-            max_name_length=max_name_length,
-            max_metric_length=max_metric_length
-        )
+        lines.extend([
+            f"├─{max_name_horizontal}─┼─{max_metric_horizontal}─┤\n",
+            decorate_line(name, metric, max_name_length, max_metric_length)
+        ])
 
-    metric_str += "╰─" + max_name_length*"─" + "─┴─" + max_metric_length*"─" + "─╯"
+    lines.append(
+        f"╰─{max_name_horizontal}─┴─{max_metric_horizontal}─╯"
+    )
 
-    return metric_str
+    return "".join(lines)

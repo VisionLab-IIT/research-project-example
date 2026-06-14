@@ -3,16 +3,20 @@ from pathlib import Path
 from torchvision.datasets import CIFAR100
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--data_path", 
+        "--data-path", 
         type=Path,
         help="Path to the dataset"
     )
     args = parser.parse_args()
 
-    dataset = CIFAR100(
+    _ = CIFAR100(
         root=args.data_path,
         download=True
     )
+
+
+if __name__ == "__main__":
+    main()

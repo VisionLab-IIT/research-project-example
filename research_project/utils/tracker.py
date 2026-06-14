@@ -5,16 +5,30 @@ from torch.utils.tensorboard import SummaryWriter
 from research_project.utils.metrics_printer import decorate_metrics
 
 
+class Timer:
+    def __init__(self, description: str):
+        self.description = description
+
+    def __enter__(self):
+        self.train_start_time = datetime.now()
+        return self
+
+    def __exit__(self, *args):
+        train_duration = datetime.now() - self.train_start_time
+        print(f"{self.description}: {train_duration}")
+        return False
+
+
 class ExperimentTracker:
     def __init__(
             self,
-            log_dir,
-            scalar_names, 
-            metric_names,
-            use_tensorboard=False
+            log_dir: Path,
+            scalar_names: tuple[str, ...] | list[str], 
+            metric_names: tuple[str, ...] | list[str],
+            use_tensorboard: bool=False
     ):
-        assert isinstance(scalar_names, (list, tuple)), f"scalar_names must be either list or tupple, got {type(scalar_names)}"
-        assert isinstance(metric_names, (list, tuple)), f"metric_names must be either list or tupple, got {type(metric_names)}"
+        assert isinstance(scalar_names, (list, tuple)), f"scalar_names must be either list or tuple, got {type(scalar_names)}"
+        assert isinstance(metric_names, (list, tuple)), f"metric_names must be either list or tuple, got {type(metric_names)}"
 
         self.log_dir = Path(log_dir)
         self.scalar_names = scalar_names
@@ -29,33 +43,30 @@ class ExperimentTracker:
         self.best_metrics = dict()
         for metric_name in metric_names:
             self.best_metrics[metric_name] = 0.0
-        
-    def log_scalar(
-            self, 
-            name:str, 
-            value,
-            index
-    ):
-        self.scalars[name].append(value)
-        
-        if self.tensorboard_writer is not None:
-            self.tensorboard_writer.add_scalar(name, value, index)
 
-    def log_hparams_and_metrics(
-        self,
-        hparams:dict
+        self.hparams = {}
+        
+    def log_scalars(
+            self, 
+            scalars: dict[str, float],
+            index: int
     ):
-        if self.tensorboard_writer is not None:
-            self.tensorboard_writer.add_hparams(
-                hparam_dict=hparams,
-                metric_dict=self.best_metrics,
-                run_name="."
-            )
+        for name, value in scalars.items():
+            self.scalars[name].append(value)
+        
+            if self.tensorboard_writer is not None:
+                self.tensorboard_writer.add_scalar(name, value, index)
+
+    def log_hparams(
+        self,
+        hparams: dict
+    ):
+        self.hparams = hparams
 
     def update_metric(
             self,
-            name:str,
-            value
+            name: str,
+            value: float
     ):
         result = (value > self.best_metrics[name])
         if result:
@@ -63,16 +74,11 @@ class ExperimentTracker:
 
         return result
     
+    def timer(self, description: str):
+        return Timer(description=description)
+    
     def print_best_metrics(self):
         print(decorate_metrics(self.best_metrics))
-    
-    def log_training_start(self):
-        self.train_start_time = datetime.now()
-
-    def log_training_end(self):
-        self.train_end_time = datetime.now()
-        self.train_duration = self.train_end_time-self.train_start_time
-        print(f"Total training time: {self.train_duration}")
 
     def save_logs(self):
         for scalar_name in self.scalar_names:
@@ -85,10 +91,15 @@ class ExperimentTracker:
 
     def finalize_run(
             self,
-            save_logs:bool=False,
-            print_metrics:bool=False
+            save_logs: bool=False,
+            print_metrics: bool=False
     ):
         if self.tensorboard_writer is not None:
+            self.tensorboard_writer.add_hparams(
+                hparam_dict=self.hparams,
+                metric_dict=self.best_metrics,
+                run_name="."
+            )
             self.tensorboard_writer.flush()
 
         if save_logs:
