@@ -11,12 +11,12 @@ class ValidationResult:
 
 
 def train_one_epoch(
-        model: torch.nn.Module,
-        dataloader: torch.utils.data.DataLoader,
-        loss_fn: callable,
-        optimizer: torch.optim.Optimizer,
-        scheduler: torch.optim.lr_scheduler.LRScheduler,
-        device: str | torch.device,
+    model: torch.nn.Module,
+    dataloader: torch.utils.data.DataLoader,
+    loss_fn: callable,
+    optimizer: torch.optim.Optimizer,
+    scheduler: torch.optim.lr_scheduler.LRScheduler,
+    device: str | torch.device,
 ) -> float:
     model.train()
 
@@ -40,17 +40,17 @@ def train_one_epoch(
 
         total_loss += detached_loss
 
-    avg_loss = total_loss.item()/len(dataloader)
-    
+    avg_loss = total_loss.item() / len(dataloader)
+
     return avg_loss
 
 
 @torch.no_grad()
 def validate_one_epoch(
-        model: torch.nn.Module,
-        dataloader: torch.utils.data.DataLoader,
-        loss_fn: callable,
-        device: str | torch.device,
+    model: torch.nn.Module,
+    dataloader: torch.utils.data.DataLoader,
+    loss_fn: callable,
+    device: str | torch.device,
 ) -> ValidationResult:
     model.eval()
 
@@ -60,17 +60,14 @@ def validate_one_epoch(
         x, y_true = x.to(device), y_true.to(device)
 
         y_pred = model(x)
-        
+
         loss = loss_fn(y_pred, y_true)
         total_loss += loss.detach()
-        
+
         acc = accuracy_metric(y_pred, y_true)
         total_acc += acc.detach()
 
-    avg_loss = total_loss.item()/len(dataloader)
-    avg_acc = total_acc.item()/len(dataloader)
-    
-    return ValidationResult(
-        loss=avg_loss,
-        accuracy=avg_acc
-    )
+    avg_loss = total_loss.item() / len(dataloader)
+    avg_acc = total_acc.item() / len(dataloader)
+
+    return ValidationResult(loss=avg_loss, accuracy=avg_acc)

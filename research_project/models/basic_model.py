@@ -5,10 +5,10 @@ from torchvision.ops import Permute
 
 class BasicLayer(nn.Module):
     def __init__(
-            self, 
-            channels: int, 
-            inv_bottleneck_factor: int=4,
-            kernel_size: int | tuple[int, int]=5
+        self,
+        channels: int,
+        inv_bottleneck_factor: int = 4,
+        kernel_size: int | tuple[int, int] = 5,
     ):
         super().__init__()
 
@@ -17,16 +17,22 @@ class BasicLayer(nn.Module):
                 in_channels=channels,
                 out_channels=channels,
                 kernel_size=kernel_size,
-                padding=kernel_size//2
+                padding=kernel_size // 2,
             ),
             Permute([0, 2, 3, 1]),
             nn.LayerNorm(normalized_shape=channels),
-            nn.Linear(in_features=channels, out_features=channels*inv_bottleneck_factor),
+            nn.Linear(
+                in_features=channels,
+                out_features=channels * inv_bottleneck_factor,
+            ),
             nn.GELU(),
-            nn.Linear(in_features=channels*inv_bottleneck_factor, out_features=channels),
-            Permute([0, 3, 1, 2])
+            nn.Linear(
+                in_features=channels * inv_bottleneck_factor,
+                out_features=channels,
+            ),
+            Permute([0, 3, 1, 2]),
         )
-    
+
     def forward(self, x: torch.Tensor):
         skip = x
         return skip + self.main_branch(x)
@@ -34,24 +40,24 @@ class BasicLayer(nn.Module):
 
 class ExampleModel(nn.Module):
     def __init__(
-            self, 
-            feature_size: int, 
-            num_stages: int,
-            num_classes: int,
-            stem_scale: int=2
+        self,
+        feature_size: int,
+        num_stages: int,
+        num_classes: int,
+        stem_scale: int = 2,
     ):
         super().__init__()
-        
+
         self.stem = nn.Sequential(
             nn.Conv2d(
-                in_channels=3, 
-                out_channels=feature_size, 
-                kernel_size=stem_scale, 
-                stride=stem_scale
+                in_channels=3,
+                out_channels=feature_size,
+                kernel_size=stem_scale,
+                stride=stem_scale,
             ),
             Permute([0, 2, 3, 1]),
             nn.LayerNorm(normalized_shape=feature_size),
-            Permute([0, 3, 1, 2])
+            Permute([0, 3, 1, 2]),
         )
 
         self.stages = nn.ModuleList()
@@ -64,11 +70,11 @@ class ExampleModel(nn.Module):
                         nn.LayerNorm(normalized_shape=stage_feature_size),
                         Permute([0, 3, 1, 2]),
                         nn.Conv2d(
-                            in_channels=stage_feature_size, 
-                            out_channels=stage_feature_size*2, 
-                            kernel_size=2, 
-                            stride=2
-                        )
+                            in_channels=stage_feature_size,
+                            out_channels=stage_feature_size * 2,
+                            kernel_size=2,
+                            stride=2,
+                        ),
                     )
                 )
                 stage_feature_size *= 2
@@ -79,14 +85,14 @@ class ExampleModel(nn.Module):
                         channels=stage_feature_size,
                     )
                 )
-            
+
         self.classifier = nn.Sequential(
             nn.LayerNorm(normalized_shape=stage_feature_size),
             nn.Linear(
-                in_features=stage_feature_size, 
-                out_features=num_classes, 
-                bias=False
-            )
+                in_features=stage_feature_size,
+                out_features=num_classes,
+                bias=False,
+            ),
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -96,7 +102,7 @@ class ExampleModel(nn.Module):
         # Stages
         for stage in self.stages:
             x = stage(x)
-        
+
         # Global average
         x = x.mean(dim=[-2, -1])
 

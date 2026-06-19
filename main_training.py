@@ -22,39 +22,39 @@ def get_args() -> tuple["argparse.Namespace", list[str]]:
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
-        "--config-path", 
+        "--config-path",
         type=Path,
         help="Path to the YAML configuration file",
-        required=True
+        required=True,
     )
     parser.add_argument(
-        "--data-path", 
-        type=Path, 
+        "--data-path",
+        type=Path,
         help="Path to the dataset",
-        required=True
+        required=True,
     )
 
     args, unknown_args = parser.parse_known_args()
-    
+
     return args, unknown_args
 
 
 def load_config(config_path: Path, unknown_args: list[str]) -> DictConfig:
     # Loading config from YAML
     config = OmegaConf.load(config_path)
-    
+
     # Loading config overrides from CLI
     cli_config = OmegaConf.from_dotlist(unknown_args)
-    
+
     # Filtering only keys that exist in YAML-based config
-    cli_config = {k:v for k, v in cli_config.items() if k in config.keys()}
+    cli_config = {k: v for k, v in cli_config.items() if k in config.keys()}
     cli_config = OmegaConf.create(cli_config)
-    
+
     # Overriding YAML config with CLI config
     config = OmegaConf.merge(config, cli_config)
-    
+
     print("---------- Config ----------")
-    print(OmegaConf.to_yaml(config).rstrip('\n'))
+    print(OmegaConf.to_yaml(config).rstrip("\n"))
     print("----------------------------")
 
     return config
@@ -64,12 +64,12 @@ def main():
     # Parse command line arguments
     args, unknown_args = get_args()
     config = load_config(args.config_path, unknown_args)
-    
+
     project_dir = Path(__file__).resolve().parent
     # Checkpoint directory
     ckpt_dir = project_dir / "ckpt"
     ckpt_dir.mkdir(exist_ok=True)
-    
+
     # Log directory
     run_start_time = datetime.strftime(datetime.now(), "%Y-%m-%d_%H-%M")
     log_dir = project_dir / "runs" / run_start_time
@@ -81,7 +81,7 @@ def main():
     torch.manual_seed(config.seed)
     torch.backends.cudnn.benchmark = False
     # Sometimes using deterministic algorithms may be difficult
-    #torch.use_deterministic_algorithms(True)
+    # torch.use_deterministic_algorithms(True)
 
     # Transforms
     rgb_mean = [0.485, 0.456, 0.406]
@@ -90,15 +90,15 @@ def main():
         [
             ToImage(),
             ToDtype(dtype=torch.float32, scale=True),
-            Normalize(mean=rgb_mean, std=rgb_std)
+            Normalize(mean=rgb_mean, std=rgb_std),
         ]
     )
-    
+
     val_transforms = Compose(
         [
             ToImage(),
             ToDtype(dtype=torch.float32, scale=True),
-            Normalize(mean=rgb_mean, std=rgb_std)
+            Normalize(mean=rgb_mean, std=rgb_std),
         ]
     )
 
@@ -123,7 +123,7 @@ def main():
         batch_size=config.hparams.batch_size,
         shuffle=True,
         num_workers=config.num_workers,
-        drop_last=True
+        drop_last=True,
     )
 
     val_loader = DataLoader(
@@ -131,7 +131,7 @@ def main():
         batch_size=1,
         shuffle=False,
         num_workers=config.num_workers,
-        drop_last=False
+        drop_last=False,
     )
 
     # Model
@@ -153,12 +153,9 @@ def main():
     scheduler_params = config.scheduler.params
     # Extending sheduler parameters
     if scheduler_cls is lr_scheduler.OneCycleLR:
-        scheduler_params["total_steps"] = config.hparams.num_epochs*len(train_loader)
+        scheduler_params["total_steps"] = config.hparams.num_epochs * len(train_loader)
     # Converting scheduler_params to keyword arguments
-    scheduler = scheduler_cls(
-        optimizer=optimizer,
-        **scheduler_params
-    )
+    scheduler = scheduler_cls(optimizer=optimizer, **scheduler_params)
 
     # Finding loss class based on config
     loss_fn = getattr(torch.nn, config.loss_fn.name)()
@@ -166,13 +163,9 @@ def main():
     # Main loop
     tracker = ExperimentTracker(
         log_dir=log_dir,
-        scalar_names=[
-            "train_losses",
-            "val_losses",
-            "val_accs"
-        ],
+        scalar_names=["train_losses", "val_losses", "val_accs"],
         metric_names=["val_acc"],
-        use_tensorboard=True
+        use_tensorboard=True,
     )
     with tracker.timer("Total training time"):
         for epoch in range(config.hparams.num_epochs):
@@ -182,44 +175,38 @@ def main():
                 loss_fn,
                 optimizer,
                 scheduler,
-                config.device
+                config.device,
             )
 
             val_res = validate_one_epoch(
                 model,
                 val_loader,
                 loss_fn,
-                config.device
+                config.device,
             )
 
             print(
                 f"Epoch {epoch} |",
                 f"Train loss: {train_loss:.4f} |",
                 f"Val loss: {val_res.loss:.4f} |",
-                f"Val accuracy: {val_res.accuracy:.4f}"
+                f"Val accuracy: {val_res.accuracy:.4f}",
             )
 
             if tracker.update_metric("val_acc", val_res.accuracy):
-                torch.save(
-                    model.state_dict(),
-                    ckpt_dir / "model.pth"
-                )
+                torch.save(model.state_dict(), ckpt_dir / "model.pth")
 
             tracker.log_scalars(
                 {
                     "train_losses": train_loss,
                     "val_losses": val_res.loss,
-                    "val_accs": val_res.accuracy, 
+                    "val_accs": val_res.accuracy,
                 },
-                index=epoch
+                index=epoch,
             )
-        
+
     tracker.log_hparams(OmegaConf.to_container(config.hparams, resolve=True))
-    tracker.finalize_run(
-        save_logs=True,
-        print_metrics=True
-    )
-    OmegaConf.save(config, log_dir/args.config_path.name)
+    tracker.finalize_run(save_logs=True, print_metrics=True)
+    OmegaConf.save(config, log_dir / args.config_path.name)
 
 
 if __name__ == "__main__":

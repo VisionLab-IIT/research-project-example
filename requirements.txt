@@ -1,6 +1,0 @@
-torch
-torchvision
-tensorboard
-tqdm
-PyYAML
-omegaconf

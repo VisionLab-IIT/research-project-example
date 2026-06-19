@@ -1,0 +1,21 @@
+[project]
+name = "research-project-example"
+version = "0.1.0"
+description = "Example to show possible approaches for project organization, config handling and experiment tracking for deep learning research."
+authors = [
+    { name = "György Richárd Bogár", email = "gyrbogar@iit.bme.hu" }
+]
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "torch",
+    "torchvision",
+    "tensorboard",
+    "tqdm",
+    "omegaconf",
+]
+
+[dependency-groups]
+dev = [
+    "ruff",
+]

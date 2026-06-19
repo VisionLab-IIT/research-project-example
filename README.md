@@ -4,6 +4,9 @@ Example to show possible approaches for project organization, config handling an
 ## Preparations
 To use the example project, you should first make the necessary preparations to clone it and install the necessary packages.
 
+> [!NOTE]
+> From stage 10 onwards, [uv](https://docs.astral.sh/uv/#installation) is required for package and project management.
+
 ### 0. Clone the repository
 Open a terminal and navigate to the directory where you would like the project to be placed, then
 ```bash
@@ -14,24 +17,6 @@ git clone https://github.com/VisionLab-IIT/research-project-example.git
 cd research-project-example
 ```
 
-### 2. (optional) Create a Python virtual environment
-It is good practice to keep installed packages of separate projects in their own virtual environments. On Linux, you can create a Python virtual environment with
-```bash
-python3 -m venv .venv
-```
-Here, `.venv` will be the directory of your virtual environment. 
-
-### 3. Install requirements
-You can install the requirements from `requirements.txt`.
-
-#### 3.1. If you want to install in your virtual environment, activate it first
-```bash
-source .venv/bin/activate
-```
-#### 3.2. Then install the requirements
-```bash
-pip install -r requirements.txt
-```
 
 ## Checkout the development stage of your choice
 You can navigate between the different stages of the project's development. Choose a stage from the list below so you can explore its changes.
@@ -55,21 +40,22 @@ Here is the list of the most important stages:
 | 7. Dynamic Loading | 07_dynamic_loading | 84f347b | Loading model, optimizer, scheduler and loss function dynamically based on config.<br> See the [`getattr()`](https://docs.python.org/3/library/functions.html#getattr) documentation for details. |
 | 8. Package Structure | 08_package_structure | 2197bda | - Organizing code into `research_project` Python package for clarity. <br>- Renaming `helpers/` to `scripts/` as it includes a runnable script. <br>- Renaming the repo from `research_project_example` to `research-project-example` in alignment with conventions. |
 | 9. Pythonic Refactor | 09_pythonic_refactor | deb1e26 | Refactoring code to follow Python conventions and idioms:<br>- Replacing underscores with hyphens for CLI arguments<br>- Using context manager for training time measurement<br>- Using `torch.no_grad()` decorator instead of context manager for validation function<br>- Introducing type annotations more widely in the project<br>- Using single entrypoint functions for `main_training.py` and `scripts/download_dataset.py`<br>- Replacing `log_scalar` with `log_scalars` for batch logging<br>- Refactoring config.yaml for easier hyperparameter logging<br>- Returning dataclass object in validation function<br>- Cleaning complete progress bars from terminal and adding per-epoch metric logging<br>- Using f-strings and `str.join()` in `metrics_printer`<br>- Organizing config loading and merging into a separate function in `main_training.py`|
+| 10. Modern Tooling | 10_modern_tooling |  | Use modern Python project tooling: [Ruff](https://docs.astral.sh/ruff/) for linting and formatting and [uv](https://docs.astral.sh/uv/) for package management. |
 
 ## Training
 > [!IMPORTANT]
 > Training instructions may differ between each stage, so please read carefully!
 
-### 1. If you work in virtual environment, activate it.
-Before running the training script, activate the environment with
+### 1. Sync environment
+This will automatically create a virtual environment and install the exact dependency versions the used in the dev env.
 ```bash
-source .venv/bin/activate
+uv sync
 ```
 
 ### 2. Download Dataset
 The currently used dataset is [CIFAR100](https://www.cs.toronto.edu/~kriz/cifar.html). You can download it to the project directory with the following script:
 ```bash
-python3 scripts/download_dataset.py --data-path=./data
+uv run scripts/download_dataset.py --data-path=./data
 ```
 where `--data-path` will be the location of the download.
 
@@ -77,13 +63,11 @@ where `--data-path` will be the location of the download.
 
 To train the example model (which is inspired by the [ConvNeXt](https://openaccess.thecvf.com/content/CVPR2022/papers/Liu_A_ConvNet_for_the_2020s_CVPR_2022_paper.pdf) architecture), run
 ```bash
-python3 main_training.py --data-path=./data --config-path=config/train.yaml
+uv run main_training.py --data-path=./data --config-path=config/train.yaml
 ```
-> [!NOTE]
-> OmegaConf can support type safety with structured configs which is not presented in this stage.
 
 > [!TIP]
 > You can override YAML config parameters with CLI parameters like this (overriding lr):
 > ```bash
-> python3 main_training.py --data-path=./data --config-path=config/train.yaml optimizer.params.lr=1e-4
+> uv run main_training.py --data-path=./data --config-path=config/train.yaml optimizer.params.lr=1e-4
 > ```
